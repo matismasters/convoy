@@ -2,13 +2,20 @@
   "name": "convoy",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/cli.js",
+  "bin": {
+    "convoy": "./src/cli.js"
+  },
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "start": "node src/cli.js",
+    "dev": "node src/cli.js",
+    "lint": "echo 'No linter configured'",
+    "build": "echo 'No build process required'"
   },
   "keywords": [],
   "author": "",
