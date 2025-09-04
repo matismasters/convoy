@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convoy Calculator Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .fail { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .vehicle-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .stat {
+            text-align: center;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .stat-label { font-size: 12px; color: #666; }
+        .stat-value { font-size: 16px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Convoy Calculator Test Suite</h1>
+    <p>Testing the calculation engine against known vehicle examples from the CSV validation data.</p>
+
+    <div id="testResults"></div>
+
+    <script src="convoy-calculator.js"></script>
+    <script>
+        // Test data from vehicle-examples-validation.csv
+        const testVehicles = [
+            {
+                name: "Nimble Scout (Subaru Impreza)",
+                specs: {
+                    vehicleName: "Nimble Scout",
+                    make: "Subaru",
+                    model: "Impreza",
+                    year: 2020,
+                    topSpeed: 190,
+                    vehicleType: "car",
+                    driveType: "awd",
+                    horsepower: 152,
+                    cylinders: 4,
+                    displacement: 2.0
+                },
+                expected: { SPD: 12, FC: 6, PWR: 3, MAN: 12 }
+            },
+            {
+                name: "Heavy Hauler (Ford F-350)",
+                specs: {
+                    vehicleName: "Heavy Hauler",
+                    make: "Ford",
+                    model: "F-350",
+                    year: 2018,
+                    topSpeed: 150,
+                    vehicleType: "truck",
+                    driveType: "4wd",
+                    horsepower: 385,
+                    cylinders: 8,
+                    displacement: 6.2
+                },
+                expected: { SPD: 9, FC: 24, PWR: 8 }
+            },
+            {
+                name: "Iron Beast (M1A1 Abrams)",
+                specs: {
+                    vehicleName: "Iron Beast",
+                    make: "M1A1",
+                    model: "Abrams",
+                    topSpeed: 67,
+                    vehicleType: "military",
+                    driveType: "tracks",
+                    horsepower: 1500,
+                    militaryClass: "heavy"
+                },
+                expected: { SPD: 4, PWR: 30 }
+            },
+            {
+                name: "Silent Runner (Motorcycle)",
+                specs: {
+                    vehicleName: "Silent Runner",
+                    make: "Kawasaki",
+                    model: "Ninja 650",
+                    year: 2018,
+                    topSpeed: 200,
+                    vehicleType: "motorcycle",
+                    driveType: "rwd",
+                    horsepower: 67,
+                    cylinders: 2,
+                    displacement: 0.649
+                },
+                expected: { SPD: 13, FC: 2, PWR: 1 }
+            }
+        ];
+
+        // Test convoy calculations
+        const testConvoys = [
+            {
+                name: "Light Convoy (2 vehicles)",
+                vehicles: ["Nimble Scout", "Silent Runner"],
+                expectedSpeed: 114 // MIN(12, 13) × 10 × 0.95 = 114
+            },
+            {
+                name: "Heavy Convoy (3 vehicles)",
+                vehicles: ["Heavy Hauler", "Iron Beast", "Nimble Scout"],
+                expectedSpeed: 38 // MIN(9, 4, 12) × 10 × 0.95 = 38
+            }
+        ];
+
+        function runTests() {
+            const calculator = new ConvoyCalculator();
+            const results = document.getElementById('testResults');
+            let passCount = 0;
+            let totalTests = 0;
+
+            // Test individual vehicles
+            results.innerHTML += '<div class="test-section"><h2>🚗 Individual Vehicle Tests</h2>';
+            
+            const calculatedVehicles = {};
+            
+            testVehicles.forEach(test => {
+                totalTests++;
+                const vehicle = calculator.calculateVehicle(test.specs);
+                calculatedVehicles[test.specs.vehicleName] = vehicle;
+                
+                let passed = true;
+                let details = '';
+                
+                if (vehicle.error) {
+                    passed = false;
+                    details = `Error: ${vehicle.error}`;
+                } else {
+                    // Check expected values
+                    for (const [stat, expected] of Object.entries(test.expected)) {
+                        const actual = vehicle.statistics[stat === 'SPD' ? 'speedRating' : 
+                                                      stat === 'FC' ? 'fuelConsumption' :
+                                                      stat === 'PWR' ? 'powerRating' :
+                                                      stat === 'MAN' ? 'maneuverability' : stat.toLowerCase()];
+                        
+                        if (actual !== expected) {
+                            passed = false;
+                            details += `${stat}: expected ${expected}, got ${actual}. `;
+                        }
+                    }
+                }
+                
+                if (passed) passCount++;
+                
+                results.innerHTML += `
+                    <div class="test-result ${passed ? 'pass' : 'fail'}">
+                        <strong>${test.name}</strong><br>
+                        ${passed ? '✅ PASS' : '❌ FAIL: ' + details}
+                        ${!vehicle.error ? `
+                            <div class="vehicle-stats">
+                                <div class="stat">
+                                    <div class="stat-label">SPD</div>
+                                    <div class="stat-value">${vehicle.statistics.speedRating}</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">FC</div>
+                                    <div class="stat-value">${vehicle.statistics.fuelConsumption}</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">PWR</div>
+                                    <div class="stat-value">${vehicle.statistics.powerRating}</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="stat-label">MAN</div>
+                                    <div class="stat-value">${vehicle.statistics.maneuverability}</div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            results.innerHTML += '</div>';
+
+            // Test convoy calculations
+            results.innerHTML += '<div class="test-section"><h2>🚛 Convoy Tests</h2>';
+            
+            testConvoys.forEach(test => {
+                totalTests++;
+                const convoyVehicles = test.vehicles.map(name => calculatedVehicles[name]).filter(v => v && !v.error);
+                const convoy = calculator.calculateConvoy(convoyVehicles);
+                
+                const actualSpeed = convoy.statistics.convoySpeed;
+                const passed = Math.abs(actualSpeed - test.expectedSpeed) <= 1; // Allow 1 km/h tolerance
+                
+                if (passed) passCount++;
+                
+                results.innerHTML += `
+                    <div class="test-result ${passed ? 'pass' : 'fail'}">
+                        <strong>${test.name}</strong><br>
+                        ${passed ? '✅ PASS' : `❌ FAIL: Expected speed ${test.expectedSpeed} km/h, got ${actualSpeed} km/h`}<br>
+                        Vehicles: ${test.vehicles.join(', ')}<br>
+                        Convoy Speed: ${actualSpeed} km/h<br>
+                        Total Fuel: ${convoy.statistics.totalFuelConsumption}<br>
+                        Total Cargo: ${convoy.statistics.totalCargoCapacity}<br>
+                        ${convoy.summary}
+                    </div>
+                `;
+            });
+            
+            results.innerHTML += '</div>';
+
+            // Summary
+            results.innerHTML += `
+                <div class="test-section">
+                    <h2>📊 Test Summary</h2>
+                    <div class="test-result ${passCount === totalTests ? 'pass' : 'fail'}">
+                        <strong>Results: ${passCount}/${totalTests} tests passed</strong><br>
+                        ${passCount === totalTests ? 
+                            '🎉 All tests passed! The calculator is working correctly.' : 
+                            `⚠️ ${totalTests - passCount} test(s) failed. Check the calculations above.`}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>
